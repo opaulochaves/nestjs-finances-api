@@ -1,7 +1,26 @@
-import { ApiProperty } from '@nestjs/swagger';
 import * as argon2 from 'argon2';
-import { IsEmail } from 'class-validator';
-import { BeforeInsert, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
+import { ArticleEntity } from '../articles/articles.entity';
+import {
+  BeforeInsert,
+  Column,
+  Entity,
+  JoinTable,
+  ManyToMany,
+  OneToMany,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
+import { CrudValidationGroups } from '@nestjsx/crud';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Exclude, Type } from 'class-transformer';
+
+const { CREATE, UPDATE } = CrudValidationGroups;
 
 @Entity('user')
 export class UserEntity {
@@ -9,22 +28,34 @@ export class UserEntity {
   id: number;
 
   @ApiProperty()
+  @IsOptional({ groups: [UPDATE] })
+  @IsNotEmpty({ groups: [CREATE] })
+  @IsString({ always: true })
+  @MaxLength(100, { always: true })
   @Column()
   username: string;
 
   @ApiProperty()
-  @Column()
+  @IsOptional({ groups: [UPDATE] })
+  @IsNotEmpty({ groups: [CREATE] })
   @IsEmail()
+  @Column()
   email: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional({ always: true })
   @Column({ default: '' })
   bio: string;
 
+  @ApiPropertyOptional()
+  @IsOptional({ always: true })
   @Column({ default: '' })
   image: string;
 
   @ApiProperty()
+  @Exclude({ toPlainOnly: true })
+  @IsNotEmpty({ groups: [CREATE] })
+  @IsOptional({ groups: [UPDATE] })
   @Column()
   password: string;
 
@@ -32,4 +63,13 @@ export class UserEntity {
   async hashPassword() {
     this.password = await argon2.hash(this.password);
   }
+
+  @ManyToMany(() => ArticleEntity)
+  @JoinTable()
+  @Type(() => ArticleEntity)
+  favorites: ArticleEntity[];
+
+  @OneToMany(() => ArticleEntity, (article) => article.author)
+  @Type(() => ArticleEntity)
+  articles: ArticleEntity[];
 }
